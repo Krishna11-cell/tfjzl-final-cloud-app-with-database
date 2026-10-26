@@ -1,8 +1,8 @@
-
+```python
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import Course, Enrollment, Question, Choice, Submission
+from .models import Course, Enrollment, Choice, Submission
 
 
 def course_list(request):
@@ -38,6 +38,7 @@ def submit(request, course_id):
     submission = Submission.objects.create(enrollment=enrollment)
 
     selected_choices = []
+
     for key, value in request.POST.items():
         if key.startswith("choice_"):
             try:
@@ -65,6 +66,7 @@ def submit(request, course_id):
 @login_required
 def show_exam_result(request, course_id, submission_id):
     course = get_object_or_404(Course, pk=course_id)
+
     submission = get_object_or_404(
         Submission,
         pk=submission_id,
@@ -72,21 +74,25 @@ def show_exam_result(request, course_id, submission_id):
         enrollment__course=course,
     )
 
-   selected_ids = set(
-    submission.choices.values_list("id", flat=True)
-   )
+    selected_ids = set(
+        submission.choices.values_list("id", flat=True)
+    )
+
     results = []
     total_score = 0
     possible_score = 0
 
     for question in course.question_set.prefetch_related("choice_set").all():
         question_choices = list(question.choice_set.all())
+
         question_choice_ids = {
             choice.id for choice in question_choices
         }
+
         selected_for_question = selected_ids & question_choice_ids
 
         question_score = question.is_get_score(selected_for_question)
+
         total_score += question_score
         possible_score += question.grade
 
@@ -103,16 +109,21 @@ def show_exam_result(request, course_id, submission_id):
             "is_correct": question_score == question.grade,
         })
 
+    submission.score = total_score
+    submission.save(update_fields=["score"])
+
     return render(
         request,
-        "onlinecourse/exam_result.html",
+        "onlinecourse/exam_result_bootstrap.html",
         {
             "course": course,
             "submission": submission,
             "results": results,
+            "selected_ids": selected_ids,
             "grade": total_score,
             "possible": possible_score,
             "total_score": total_score,
             "possible_score": possible_score,
         },
     )
+```
