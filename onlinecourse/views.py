@@ -72,9 +72,9 @@ def show_exam_result(request, course_id, submission_id):
         enrollment__course=course,
     )
 
-    selected_ids = set(
-        submission.choices.values_list("id", flat=True)
-    )
+   selected_ids = set(
+    submission.choices.values_list("id", flat=True)
+   )
     results = []
     total_score = 0
     possible_score = 0
