@@ -5,11 +5,15 @@ from .models import (
     Lesson,
     Instructor,
     Learner,
-    Enrollment,
     Question,
     Choice,
     Submission,
 )
+
+
+class LessonInline(admin.StackedInline):
+    model = Lesson
+    extra = 5
 
 
 class ChoiceInline(admin.TabularInline):
@@ -22,56 +26,31 @@ class QuestionInline(admin.StackedInline):
     extra = 1
 
 
-class QuestionAdmin(admin.ModelAdmin):
-    list_display = ("text", "course", "grade")
-    list_filter = ("course",)
-    search_fields = ("text",)
-    inlines = [ChoiceInline]
-
-
-class ChoiceAdmin(admin.ModelAdmin):
-    list_display = ("text", "question", "is_correct")
-    list_filter = ("is_correct",)
+class CourseAdmin(admin.ModelAdmin):
+    inlines = [LessonInline, QuestionInline]
+    list_display = ("name", "description")
+    search_fields = ("name", "description")
 
 
 class LessonAdmin(admin.ModelAdmin):
     list_display = ("title", "course", "order")
+
+
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ("question_text", "course", "grade")
     list_filter = ("course",)
-    ordering = ("course", "order")
+    inlines = [ChoiceInline]
 
 
-class CourseAdmin(admin.ModelAdmin):
-    list_display = ("name",)
-    search_fields = ("name",)
-    inlines = [QuestionInline]
-
-
-class InstructorAdmin(admin.ModelAdmin):
-    list_display = ("user", "full_time", "total_learners")
-
-
-class LearnerAdmin(admin.ModelAdmin):
-    list_display = ("user", "occupation", "social_link")
-    list_filter = ("occupation",)
-
-
-class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ("user", "course", "date_enrolled", "mode", "rating")
-    list_filter = ("course", "mode")
-
-
-class SubmissionAdmin(admin.ModelAdmin):
-    list_display = ("id", "enrollment", "score", "submitted_at")
-    list_filter = ("submitted_at",)
-    filter_horizontal = ("choices",)
-    readonly_fields = ("submitted_at",)
+class ChoiceAdmin(admin.ModelAdmin):
+    list_display = ("choice_text", "question", "is_correct")
+    list_filter = ("is_correct",)
 
 
 admin.site.register(Course, CourseAdmin)
 admin.site.register(Lesson, LessonAdmin)
-admin.site.register(Instructor, InstructorAdmin)
-admin.site.register(Learner, LearnerAdmin)
-admin.site.register(Enrollment, EnrollmentAdmin)
+admin.site.register(Instructor)
+admin.site.register(Learner)
 admin.site.register(Question, QuestionAdmin)
 admin.site.register(Choice, ChoiceAdmin)
-admin.site.register(Submission, SubmissionAdmin)
+admin.site.register(Submission)
