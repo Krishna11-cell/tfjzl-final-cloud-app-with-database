@@ -1,4 +1,3 @@
-
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.timezone import now
@@ -48,9 +47,7 @@ class Course(models.Model):
 
 
 class Lesson(models.Model):
-    course = models.ForeignKey(
-        Course, related_name="lessons", on_delete=models.CASCADE
-    )
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     content = models.TextField(blank=True)
     order = models.PositiveIntegerField(default=1)
@@ -85,34 +82,43 @@ class Enrollment(models.Model):
         return f"{self.user.username} - {self.course.name}"
 
 
+
 class Question(models.Model):
-    course = models.ForeignKey(
-        Course, related_name="questions", on_delete=models.CASCADE
-    )
-    text = models.CharField(max_length=500)
-    grade = models.PositiveIntegerField(default=1)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    question_text = models.CharField(max_length=500)
+    grade = models.IntegerField(default=1)
 
     def __str__(self):
-        return self.text
+        return self.question_text
+
+    def is_get_score(self, selected_choice_ids):
+        correct_ids = set(
+            self.choice_set.filter(is_correct=True).values_list("id", flat=True)
+        )
+        selected_ids = set(selected_choice_ids)
+
+        if correct_ids and selected_ids == correct_ids:
+            return self.grade
+        return 0
 
 
 class Choice(models.Model):
-    question = models.ForeignKey(
-        Question, related_name="choices", on_delete=models.CASCADE
-    )
-    text = models.CharField(max_length=300)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    choice_text = models.CharField(max_length=300)
     is_correct = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.text
+        return self.choice_text
 
 
 class Submission(models.Model):
-    enrollment = models.ForeignKey(
-        Enrollment,
-        related_name="submissions",
-        on_delete=models.CASCADE,
-    )
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE)
+    choices = models.ManyToManyField(Choice)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.enrollment.user.username} - {self.enrollment.course.name}"
+
     choices = models.ManyToManyField(Choice, related_name="submissions")
     score = models.PositiveIntegerField(default=0)
     submitted_at = models.DateTimeField(auto_now_add=True)
