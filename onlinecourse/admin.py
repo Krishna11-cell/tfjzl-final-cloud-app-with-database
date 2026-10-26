@@ -1,12 +1,12 @@
-
+```python
 from django.contrib import admin
 from .models import (
+    Choice,
     Course,
-    Lesson,
     Instructor,
     Learner,
+    Lesson,
     Question,
-    Choice,
     Submission,
 )
 
@@ -54,3 +54,4 @@ admin.site.register(Learner)
 admin.site.register(Question, QuestionAdmin)
 admin.site.register(Choice, ChoiceAdmin)
 admin.site.register(Submission)
+```
