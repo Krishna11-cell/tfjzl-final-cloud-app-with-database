@@ -15,16 +15,10 @@ def course_list(request):
 
 def course_details(request, course_id):
     course = get_object_or_404(Course, pk=course_id)
-    questions = course.questions.prefetch_related("choices").all()
-
     return render(
         request,
         "onlinecourse/course_details_bootstrap.html",
-        {
-            "course": course,
-            "lessons": course.lessons.all(),
-            "questions": questions,
-        },
+        {"course": course},
     )
 
 
@@ -41,27 +35,24 @@ def submit(request, course_id):
         defaults={"mode": Enrollment.AUDIT},
     )
 
-    questions = course.questions.prefetch_related("choices").all()
+    submission = Submission.objects.create(enrollment=enrollment)
+
     selected_choices = []
-    score = 0
+    for key, value in request.POST.items():
+        if key.startswith("choice_"):
+            try:
+                choice_id = int(value)
+            except (TypeError, ValueError):
+                continue
 
-    for question in questions:
-        choice_id = request.POST.get(f"question_{question.id}")
+            choice = Choice.objects.filter(
+                pk=choice_id,
+                question__course=course,
+            ).first()
 
-        if not choice_id:
-            continue
+            if choice:
+                selected_choices.append(choice)
 
-        choice = question.choices.filter(pk=choice_id).first()
-
-        if choice:
-            selected_choices.append(choice)
-            if choice.is_correct:
-                score += question.grade
-
-    submission = Submission.objects.create(
-        enrollment=enrollment,
-        score=score,
-    )
     submission.choices.set(selected_choices)
 
     return redirect(
@@ -84,22 +75,32 @@ def show_exam_result(request, course_id, submission_id):
     selected_ids = set(
         submission.choices.values_list("id", flat=True)
     )
-
     results = []
-    for question in course.questions.prefetch_related("choices").all():
-        choices = list(question.choices.all())
-        correct_choices = [c for c in choices if c.is_correct]
-        selected = [c for c in choices if c.id in selected_ids]
+    total_score = 0
+    possible_score = 0
+
+    for question in course.question_set.prefetch_related("choice_set").all():
+        question_choices = list(question.choice_set.all())
+        question_choice_ids = {
+            choice.id for choice in question_choices
+        }
+        selected_for_question = selected_ids & question_choice_ids
+
+        question_score = question.is_get_score(selected_for_question)
+        total_score += question_score
+        possible_score += question.grade
 
         results.append({
             "question": question,
-            "choices": choices,
-            "selected_choices": selected,
-            "correct_choices": correct_choices,
-            "is_correct": bool(
-                correct_choices
-                and any(c.id in selected_ids for c in correct_choices)
-            ),
+            "selected_choices": [
+                choice for choice in question_choices
+                if choice.id in selected_ids
+            ],
+            "correct_choices": [
+                choice for choice in question_choices
+                if choice.is_correct
+            ],
+            "is_correct": question_score == question.grade,
         })
 
     return render(
@@ -109,5 +110,9 @@ def show_exam_result(request, course_id, submission_id):
             "course": course,
             "submission": submission,
             "results": results,
+            "grade": total_score,
+            "possible": possible_score,
+            "total_score": total_score,
+            "possible_score": possible_score,
         },
     )
