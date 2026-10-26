@@ -103,6 +103,7 @@ class Question(models.Model):
 
         if correct_ids and selected_ids == correct_ids:
             return self.grade
+
         return 0
 
 
@@ -117,7 +118,10 @@ class Choice(models.Model):
 
 class Submission(models.Model):
     enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE)
-    choices = models.ManyToManyField(Choice, related_name="submissions")
+    choices = models.ManyToManyField(
+        Choice,
+        related_name="submissions",
+    )
     score = models.PositiveIntegerField(default=0)
     submitted_at = models.DateTimeField(auto_now_add=True)
 
